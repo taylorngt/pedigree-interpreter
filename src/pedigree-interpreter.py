@@ -355,6 +355,7 @@ def pedigree_processing(FamID):
         for coord in IndvIDsDict[individual]['lat_coords']:
             line_img = cv2.circle(line_img, coord, radius=10, color=(255,255,255), thickness=-1)
     
+    #TODO make this into separate function for PED file export
     #----------------------------------------
     # Pedfile Generation
     #----------------------------------------
