@@ -6,12 +6,18 @@ import numpy as np
 from PIL import Image
 from os import listdir, makedirs
 import pandas as pd
+#-----------------------------
+# PED Data Frame Object Class
+#-----------------------------
+#TODO implement class for PED file dataframes
+
 
 #-----------------------------
 # PED FILE EXPORT
 #-----------------------------
 def PED_export(PED_df, output_dir = '.'):
     FamID = PED_df['FamilyID'][0]
+    makedirs(output_dir, exist_ok= True)
     PED_df.to_csv(path_or_buf= f'{output_dir}/{FamID}.ped',
                   sep = '\t',
                   header= False,
@@ -379,7 +385,7 @@ def pedigree_processing(FamID,
     return PedFileDF
 
 #---------------------------------------------
-# Main Pedigree Interpretation Function
+# Main Pedigree Interpretation Function Test
 #---------------------------------------------
 if __name__ == '__main__':
     ChosenID = input('Enter A Family ID for testing: ')
