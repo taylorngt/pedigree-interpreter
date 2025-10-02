@@ -4,13 +4,23 @@ from pprint import pprint
 import math
 import numpy as np
 from PIL import Image
-from PIL import ImageEnhance
 from os import listdir, makedirs
+import pandas as pd
+
+#-----------------------------
+# PED FILE EXPORT
+#-----------------------------
+def PED_export(PED_df, output_dir = '.'):
+    FamID = PED_df['FamilyID'][0]
+    PED_df.to_csv(path_or_buf= f'{output_dir}/{FamID}.ped',
+                  sep = '\t',
+                  header= False,
+                  index= False)
 
 #-----------------------------
 # IMAGE ENHANCEMENT
 #-----------------------------
-def image_enhance(FamID, input_dir, output_dir, upscale_factor = 10):
+def image_enhance(FamID, input_dir, upscale_factor = 10):
     '''
     Intakes raw pedigree image file and upscales for downstream analysis
 
@@ -26,16 +36,13 @@ def image_enhance(FamID, input_dir, output_dir, upscale_factor = 10):
     ourput_path (string): complete file path from wd to upscaled image
     '''
     input_path = f'{input_dir}/{FamID}.png'
-    output_path = f'{output_dir}/{FamID}_upscaled{upscale_factor}x.png'
 
     img = Image.open(input_path)
 
     new_size = (img.width * upscale_factor, img.height * upscale_factor)
     upscaled_img = img.resize(new_size, Image.LANCZOS)
-
-    makedirs(output_dir, exist_ok=True) 
-    upscaled_img.save(output_path, quality= 95)
-
+    output_path = f'{input_dir}/{FamID}_{upscale_factor}Xupscaled.png'
+    upscaled_img.save(output_path)
     return output_path
 
 def linDist(coord1, coord2):
@@ -246,17 +253,17 @@ def trackRelation(normalized_categorized_lines, IndvDataDict):
 
     return IndvDataDict, connection_lines
 
-def pedigree_processing(FamID):
+def pedigree_processing(FamID,
+                        raw_image_dir = '',
+                        export= False,
+                        output_dir = '.'):
     #----------------------------------------
     # ENHANCE IMAGE
     #----------------------------------------
     upscale_factor = 10
-    raw_image_dir = f'data/Pedigree_Images/Raw_Images'
-    upscaled_image_dir = f'data/Pedigree_Images/Upscaled_Images'
     upscaled_image_path = image_enhance(FamID = FamID,
-                                    input_dir= raw_image_dir,
-                                    output_dir= upscaled_image_dir,
-                                    upscale_factor= upscale_factor)
+                                   input_dir= raw_image_dir,
+                                   upscale_factor= upscale_factor)
 
     #----------------------------------------
     # INDIVIDUAL ID DETECTION
@@ -355,50 +362,29 @@ def pedigree_processing(FamID):
         for coord in IndvIDsDict[individual]['lat_coords']:
             line_img = cv2.circle(line_img, coord, radius=10, color=(255,255,255), thickness=-1)
     
-    #TODO make this into separate function for PED file export
-    #----------------------------------------
-    # Pedfile Generation
-    #----------------------------------------
-    makedirs('data/PedFiles/Interpreted_Pedigrees', exist_ok= True)
-    PedFile = f'data/PedFiles/Interpreted_Pedigrees/{FamID}a.ped'
+    #package pedigree data into dataframe structured like PED file
     PedFileDataFields = ['PaternalID', 'MaternalID', 'Sex', 'Phenotype']
-    with open(PedFile, 'w') as pf:
-        for IndvID in IndvIDsDict.keys():
-            pf.write(f'{FamID} {IndvID}')
-            for field in PedFileDataFields:
-                pf.write(f' {IndvIDsDict[IndvID][field]}')
-            pf.write('\n')
-
+    #constructs df and subsets to PED file format-relevant fields
+    PedFileDF = pd.DataFrame.from_dict(IndvIDsDict, orient= 'index')[PedFileDataFields]
     
-    return redacted_img, nodeless_img, line_img
+    #adding individualID and FamilyID Fields (reordered to fit PED file format)
+    PedFileDF.index.name = 'IndividualID'
+    PedFileDF = PedFileDF.reset_index()
+    PedFileDF['FamilyID'] = [FamID]*len(PedFileDF)
+    PedFileDF = PedFileDF.reindex(columns= ['FamilyID', 'IndividualID']+PedFileDataFields)
+    
+    if export:
+        PED_export(PedFileDF, output_dir= output_dir)
 
+    return PedFileDF
 
 #---------------------------------------------
 # Main Pedigree Interpretation Function
 #---------------------------------------------
 if __name__ == '__main__':
-    ChosenIDs = input('Enter A Family ID for testing ("All_Available" for pedigree set): ')
-    FamilyIDs = []
-    if ChosenIDs == 'All_Available':
-        avail_ped_images = listdir('data/Pedigree_Images/Raw_Images')
-        for ped_image in avail_ped_images:
-            if ped_image.endswith('.png'):
-                FamilyIDs.append(ped_image[:-4])
-    else:
-        FamilyIDs.append(ChosenIDs)
-
-    SaveProcessingImages = input('Do you want to save the processing images (y/n): ')
-    for FamilyID in FamilyIDs:
-        
-        if FamilyID[-3:] != '(e)':
-            print(f'\tProcessing {FamilyID}')
-            redacted_img, nodeless_img, line_img = pedigree_processing(FamilyID)
-            
-            if SaveProcessingImages == 'y':
-                image_path = 'data/CVProcessingImages'
-                makedirs(image_path, exist_ok=True)
-                cv2.imwrite(f'{image_path}/{FamilyID}redacted.png', redacted_img)
-                cv2.imwrite(f'{image_path}/{FamilyID}nodesless.png', nodeless_img)
-                cv2.imwrite(f'{image_path}/{FamilyID}lines.png', line_img)
-        else:
-            print(f'\tSkipping {FamilyID}: misinterpretation flag-(e).')
+    ChosenID = input('Enter A Family ID for testing: ')
+    image_dir = 'data/Pedigree_Images/Raw_Images'
+    FamilyPEdFileDF = pedigree_processing(FamID= ChosenID, raw_image_dir= image_dir, export= True)
+    print(FamilyPEdFileDF)
+    
+    
