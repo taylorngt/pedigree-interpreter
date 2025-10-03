@@ -30,7 +30,7 @@ dependencies = [
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "_version.py"
+version-file = "src/_version.py"
 
 [project.urls]
 Homepage = "https://github.com/taylorngt/pedigree-interpreter"
