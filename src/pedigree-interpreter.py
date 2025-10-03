@@ -1,6 +1,5 @@
 import pytesseract
 import cv2
-from pprint import pprint
 import math
 import numpy as np
 from PIL import Image
