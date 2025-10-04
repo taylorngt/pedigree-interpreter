@@ -259,7 +259,7 @@ def trackRelation(normalized_categorized_lines, IndvDataDict):
     return IndvDataDict, connection_lines
 
 def pedigree_processing(FamID,
-                        raw_image_dir = '',
+                        raw_image_dir = '.',
                         export= False,
                         output_dir = '.'):
     #----------------------------------------
