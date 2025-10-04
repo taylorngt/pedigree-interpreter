@@ -3,5 +3,5 @@
 
 # Build artifacts
 dist/
-src/_version.py
+src/PedInterp/_version.py
 
