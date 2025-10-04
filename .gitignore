@@ -1,3 +1,7 @@
+#macOS system files
+.DS_Store
+
 # Build artifacts
 dist/
 src/_version.py
+
